@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Surname Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-zone.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-zone svg {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .upload-zone p {
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .upload-zone .hint {
+            color: #999;
+            font-size: 13px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: #f5f5f5;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .file-item .remove {
+            cursor: pointer;
+            color: #999;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+
+        .file-item .remove:hover {
+            color: #e74c3c;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-process {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-process:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-process:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-clear {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+            display: block;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+            display: block;
+        }
+
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border-left: 4px solid #f57c00;
+            display: block;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(25, 118, 210, 0.3);
+            border-top-color: #1976d2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .file-count {
+            color: #999;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 PDF Surname Extractor</h1>
+        <p class="subtitle">Upload up to 50 scanned PDFs and get an Excel file with surname counts</p>
+
+        <div class="upload-zone" id="uploadZone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Click to upload or drag PDFs here</p>
+            <p class="hint">Max 50 files, up to 500MB total</p>
+            <input type="file" id="fileInput" multiple accept=".pdf">
+        </div>
+
+        <div class="file-list" id="fileList"></div>
+        <div class="file-count" id="fileCount"></div>
+
+        <div class="button-group">
+            <button class="btn-process" id="processBtn" disabled>Process PDFs</button>
+            <button class="btn-clear" id="clearBtn">Clear</button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileCount = document.getElementById('fileCount');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusDiv = document.getElementById('status');
+
+        let selectedFiles = [];
+
+        // Upload zone interactions
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pdf'));
+            addFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            addFiles(Array.from(e.target.files));
+        });
+
+        function addFiles(newFiles) {
+            selectedFiles = [...selectedFiles, ...newFiles].slice(0, 50);
+            updateFileList();
+            processBtn.disabled = selectedFiles.length === 0;
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span>${file.name}</span>
+                    <span class="remove" onclick="removeFile(${index})">✕</span>
+                `;
+                fileList.appendChild(item);
+            });
+            fileCount.textContent = `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} selected`;
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            processBtn.disabled = selectedFiles.length === 0;
+        }
+
+        clearBtn.addEventListener('click', () => {
+            selectedFiles = [];
+            fileInput.value = '';
+            updateFileList();
+            statusDiv.className = 'status';
+            statusDiv.innerHTML = '';
+            processBtn.disabled = true;
+        });
+
+        processBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+
+            processBtn.disabled = true;
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = '<span class="spinner"></span>Processing ' + selectedFiles.length + ' PDF(s)...';
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Download the file
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'surname_counts.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                    statusDiv.className = 'status success';
+                    statusDiv.innerHTML = '✓ Excel file downloaded successfully!';
+                    
+                    // Clear after success
+                    setTimeout(() => {
+                        selectedFiles = [];
+                        fileInput.value = '';
+                        updateFileList();
+                        processBtn.disabled = true;
+                        statusDiv.className = 'status';
+                    }, 3000);
+                } else {
+                    const error = await response.json();
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = '✕ Error: ' + (error.error || 'Unknown error');
+                    processBtn.disabled = false;
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = '✕ Error: ' + error.message;
+                processBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
